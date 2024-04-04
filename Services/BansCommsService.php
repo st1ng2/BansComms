@@ -5,6 +5,7 @@ namespace Flute\Modules\BansComms\Services;
 use Flute\Core\Database\Entities\DatabaseConnection;
 use Flute\Core\Database\Entities\User;
 use Flute\Modules\BansComms\Driver\DriverFactory;
+use Flute\Modules\BansComms\Driver\Items\IKSDriver;
 use Flute\Modules\BansComms\Driver\Items\MaterialAdminDriver;
 use Flute\Modules\BansComms\Exceptions\ModNotFoundException;
 use Flute\Modules\BansComms\Exceptions\ServerNotFoundException;
@@ -13,7 +14,8 @@ class BansCommsService
 {
     protected array $serverModes = [];
     protected array $defaultDrivers = [
-        MaterialAdminDriver::class
+        MaterialAdminDriver::class,
+        IKSDriver::class
     ];
 
     protected DriverFactory $driverFactory;
@@ -170,7 +172,7 @@ class BansCommsService
     public function getDriverFactory(array $server)
     {
         try {
-            return $this->driverFactory->createDriver($server['factory'], $server['additional']);
+            return $this->driverFactory->createDriver($server['factory'], (array) $server['additional']);
         } catch (\RuntimeException $e) {
             logs()->error($e);
             throw new \Exception(__('def.unknown_error'));

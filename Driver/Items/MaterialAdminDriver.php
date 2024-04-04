@@ -23,8 +23,10 @@ class MaterialAdminDriver implements DriverInterface
                     if (type === "display") {
                         let date = new Date(data * 1000);
                         return ("0" + (date.getMonth() + 1)).slice(-2) + "-" +
-                               ("0" + date.getDate()).slice(-2) + "-" +
-                               date.getFullYear();
+                            ("0" + date.getDate()).slice(-2) + "-" +
+                            date.getFullYear() + " " +
+                            ("0" + date.getHours()).slice(-2) + ":" +
+                            ("0" + date.getMinutes()).slice(-2);
                     }
                     return data;
                 }
@@ -59,7 +61,7 @@ class MaterialAdminDriver implements DriverInterface
                     } else if (Date.now() >= ends * 1000 && length != '0') {
                         return '<div class=\"ban-chip bans-end\">' + secondsToReadable(length) + '</div>';
                     } else {
-                        return secondsToReadable(length);
+                        return '<div class=\"ban-chip\">' + secondsToReadable(length) + '</div>';
                     }
                 }
             "),
@@ -74,8 +76,10 @@ class MaterialAdminDriver implements DriverInterface
                     if (type === "display") {
                         let date = new Date(data * 1000);
                         return ("0" + (date.getMonth() + 1)).slice(-2) + "-" +
-                               ("0" + date.getDate()).slice(-2) + "-" +
-                               date.getFullYear();
+                            ("0" + date.getDate()).slice(-2) + "-" +
+                            date.getFullYear() + " " +
+                            ("0" + date.getHours()).slice(-2) + ":" +
+                            ("0" + date.getMinutes()).slice(-2);
                     }
                     return data;
                 }
@@ -102,7 +106,7 @@ class MaterialAdminDriver implements DriverInterface
                     } else if (Date.now() >= ends * 1000 && length != '0') {
                         return '<div class=\"ban-chip bans-end\">' + secondsToReadable(length) + '</div>';
                     } else {
-                        return secondsToReadable(length);
+                        return '<div class=\"ban-chip\">' + secondsToReadable(length) + '</div>';
                     }
                 }
             "),
@@ -184,7 +188,7 @@ class MaterialAdminDriver implements DriverInterface
             }
         }
 
-        if (isset ($search['value']) && !empty ($search['value'])) {
+        if (isset($search['value']) && !empty($search['value'])) {
             $select->where('name', 'like', "%" . $search['value'] . "%")
                 ->orWhere('reason', 'like', "%" . $search['value'] . "%")
                 ->orWhere('authid', 'like', "%" . $search['value'] . "%");

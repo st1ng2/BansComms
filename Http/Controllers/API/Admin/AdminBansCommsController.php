@@ -26,7 +26,7 @@ class AdminBansCommsController extends AbstractController
             $this->service->store(
                 $request->mod,
                 $request->dbname,
-                $request->additional ?? '[]',
+                $request->editorContent ?? '[]',
                 (int) $request->sid
             );
 
@@ -56,7 +56,7 @@ class AdminBansCommsController extends AbstractController
                 (int) $id,
                 $request->mod,
                 $request->dbname,
-                $request->additional ?? '[]',
+                $request->editorContent ?? '[]',
                 (int) $request->sid
             );
 
