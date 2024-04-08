@@ -7,6 +7,7 @@ use Flute\Core\Database\Entities\User;
 use Flute\Modules\BansComms\Driver\DriverFactory;
 use Flute\Modules\BansComms\Driver\Items\IKSDriver;
 use Flute\Modules\BansComms\Driver\Items\MaterialAdminDriver;
+use Flute\Modules\BansComms\Driver\Items\PisexDriver;
 use Flute\Modules\BansComms\Exceptions\ModNotFoundException;
 use Flute\Modules\BansComms\Exceptions\ServerNotFoundException;
 
@@ -15,7 +16,8 @@ class BansCommsService
     protected array $serverModes = [];
     protected array $defaultDrivers = [
         MaterialAdminDriver::class,
-        IKSDriver::class
+        IKSDriver::class,
+        PisexDriver::class
     ];
 
     protected DriverFactory $driverFactory;
@@ -41,7 +43,7 @@ class BansCommsService
      * @return mixed Table rendering result.
      * @throws \Exception If the module is not configured or server is not found.
      */
-    public function generateTable(?int $sid = null, string $type = 'bans')
+    public function generateTable(?int $sid = null, string $type = 'bans', ?User $user = null)
     {
         $this->validateServerModes();
 
@@ -49,14 +51,30 @@ class BansCommsService
 
         $factory = $this->getDriverFactory($server);
 
-        $table = table(url($type === 'bans' ? "banscomms/get/{$server['server']->id}" : "banscomms/get/comms/{$server['server']->id}"));
+        $url = null;
+
+        if( $user ) {
+            $url = $type === 'bans' ? "banscomms/user/{$user->id}/{$server['server']->id}" : "banscomms/user/comms/{$user->id}/{$server['server']->id}";
+        } else {
+            $url = $type === 'bans' ? "banscomms/get/{$server['server']->id}" : "banscomms/get/comms/{$server['server']->id}";
+        }
+
+        $table = table(url($url));
         $table->addColumns($type === 'bans' ? $factory->getBansColumns() : $factory->getCommsColumns());
 
         return $table->render();
     }
 
-    public function getUserBansComms(User $user, ?int $sid = null)
-    {
+    public function getUserBans(
+        User $user,
+        int $page,
+        int $perPage,
+        int $draw,
+        array $columns = [],
+        array $search = [],
+        array $order = [],
+        ?int $sid = null
+    ) {
         $this->validateServerModes();
 
         try {
@@ -64,7 +82,50 @@ class BansCommsService
 
             $factory = $this->getDriverFactory($serverConfig);
 
-            return $factory->getUserStats($serverConfig['server']->id, $user);
+            return $factory->getUserBans(
+                $user,
+                $serverConfig['server'],
+                $serverConfig['db'],
+                $page,
+                $perPage,
+                $draw,
+                $columns,
+                $search,
+                $order
+            );
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    public function getUserComms(
+        User $user,
+        int $page,
+        int $perPage,
+        int $draw,
+        array $columns = [],
+        array $search = [],
+        array $order = [],
+        ?int $sid = null
+    ) {
+        $this->validateServerModes();
+
+        try {
+            $serverConfig = $this->getServerFromModes($sid);
+
+            $factory = $this->getDriverFactory($serverConfig);
+
+            return $factory->getUserComms(
+                $user,
+                $serverConfig['server'],
+                $serverConfig['db'],
+                $page,
+                $perPage,
+                $draw,
+                $columns,
+                $search,
+                $order
+            );
         } catch (\Exception $e) {
             return [];
         }
@@ -131,7 +192,7 @@ class BansCommsService
      */
     public function validateServerModes(): void
     {
-        if (empty ($this->serverModes)) {
+        if (empty($this->serverModes)) {
             throw new \Exception(__('banscomms.module_is_not_configured'));
         }
     }
@@ -153,7 +214,7 @@ class BansCommsService
             return $this->serverModes[$key];
         }
 
-        if (!isset ($this->serverModes[$sid])) {
+        if (!isset($this->serverModes[$sid])) {
             throw new ServerNotFoundException($sid);
         }
 
@@ -194,7 +255,7 @@ class BansCommsService
         $modes = $modes->fetchAll();
 
         foreach ($modes as $mode) {
-            if (!config("database.databases.{$mode->dbname}") || empty ($mode->server)) {
+            if (!config("database.databases.{$mode->dbname}") || empty($mode->server)) {
                 continue;
             }
 

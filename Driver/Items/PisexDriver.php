@@ -11,15 +11,8 @@ use Spiral\Database\Injection\Expression;
 use Spiral\Database\Injection\Fragment;
 use Spiral\Database\Injection\Parameter;
 
-class IKSDriver implements DriverInterface
+class PisexDriver implements DriverInterface
 {
-    protected int $sid = 1;
-
-    public function __construct(array $config = [])
-    {
-        $this->sid = isset($config['sid']) ? (int) $config['sid'] : 1;
-    }
-
     public function getCommsColumns(): array
     {
         return [
@@ -32,9 +25,7 @@ class IKSDriver implements DriverInterface
             (new TableColumn('admin_name', __('banscomms.table.admin')))->setType('text')->setOrderable(false),
             (new TableColumn('end', __('banscomms.table.end_date')))->setType('text')
                 ->setRender("{{ENDS}}", $this->dateFormatRender()),
-            (new TableColumn('time', ''))->setType('text')->setVisible(false),
-            (new TableColumn('Unbanned', ''))->setType('text')->setVisible(false),
-            (new TableColumn('UnbannedBy', ''))->setType('text')->setVisible(false),
+            (new TableColumn('duration', ''))->setType('text')->setVisible(false),
             (new TableColumn('', __('banscomms.table.length')))
                 ->setSearchable(false)->setOrderable(false)
                 ->setRender('{{KEY}}', $this->timeFormatRender()),
@@ -51,9 +42,7 @@ class IKSDriver implements DriverInterface
             (new TableColumn('admin_name', __('banscomms.table.admin')))->setType('text')->setOrderable(false),
             (new TableColumn('end', __('banscomms.table.end_date')))->setType('text')
                 ->setRender("{{ENDS}}", $this->dateFormatRender()),
-            (new TableColumn('time', ''))->setType('text')->setVisible(false),
-            (new TableColumn('Unbanned', ''))->setType('text')->setVisible(false),
-            (new TableColumn('UnbannedBy', ''))->setType('text')->setVisible(false),
+            (new TableColumn('duration', ''))->setType('text')->setVisible(false),
             (new TableColumn('', __('banscomms.table.length')))
                 ->setSearchable(false)->setOrderable(false)
                 ->setRender('{{KEY}}', $this->timeFormatRenderBans()),
@@ -139,7 +128,7 @@ class IKSDriver implements DriverInterface
         $steam = $user->getSocialNetwork('Steam') ?? $user->getSocialNetwork('HttpsSteam');
 
         $select = $this->prepareSelectQuery($server, $dbname, $columns, $search, $order, 'bans')
-            ->where('bans.sid', (int) $steam->value);
+            ->where('bans.steamid', (int) $steam->value);
 
         // Применение пагинации
         $paginator = new \Spiral\Pagination\Paginator($perPage);
@@ -154,7 +143,7 @@ class IKSDriver implements DriverInterface
             'recordsTotal' => $paginate->count(),
             'recordsFiltered' => $paginate->count(),
             'data' => TablePreparation::normalize(
-                ['created', 'name', 'reason', 'admin_name', 'end', 'time', 'Unbanned', 'UnbannedBy', ''],
+                ['created', 'name', 'reason', 'admin_name', 'end', 'duration', ''],
                 $result
             )
         ];
@@ -175,8 +164,8 @@ class IKSDriver implements DriverInterface
 
         list($selectMutes, $selectGags) = $this->prepareSelectQuery($server, $dbname, $columns, $search, $order, 'comms');
 
-        $selectMutes->where('mutes.sid', (int) $steam->value);
-        $selectGags->where('gags.sid', (int) $steam->value);
+        $selectMutes->where('mutes.steamid', (int) $steam->value);
+        $selectGags->where('gags.steamid', (int) $steam->value);
 
         // Fetch results separately for mutes and gags
         $resultMutes = $selectMutes->fetchAll();
@@ -191,7 +180,7 @@ class IKSDriver implements DriverInterface
             'recordsTotal' => count($mergedResults),
             'recordsFiltered' => count($mergedResults),
             'data' => TablePreparation::normalize(
-                ['created', 'source', 'name', 'reason', 'admin_name', 'end', 'time', 'Unbanned', ''],
+                ['created', 'source', 'name', 'reason', 'admin_name', 'end', 'duration', ''],
                 $paginatedResults
             )
         ];
@@ -222,7 +211,7 @@ class IKSDriver implements DriverInterface
             'recordsTotal' => count($mergedResults),
             'recordsFiltered' => count($mergedResults),
             'data' => TablePreparation::normalize(
-                ['created', 'source', 'name', 'reason', 'admin_name', 'end', 'time', 'Unbanned', ''],
+                ['created', 'source', 'name', 'reason', 'admin_name', 'end', 'duration', ''],
                 $paginatedResults
             )
         ];
@@ -250,7 +239,7 @@ class IKSDriver implements DriverInterface
             'recordsTotal' => $paginate->count(),
             'recordsFiltered' => $paginate->count(),
             'data' => TablePreparation::normalize(
-                ['created', 'name', 'reason', 'admin_name', 'end', 'time', 'Unbanned', 'UnbannedBy', ''],
+                ['created', 'name', 'reason', 'admin_name', 'end', 'duration', ''],
                 $result
             )
         ];
@@ -263,21 +252,20 @@ class IKSDriver implements DriverInterface
             $selectQueries = [];
 
             foreach (['mutes', 'gags'] as $tableName) {
-                $select = $this->buildSelectQuery($dbname, $tableName, $columns, $search, $order, $this->sid);
+                $select = $this->buildSelectQuery($dbname, $tableName, $columns, $search, $order);
                 array_push($selectQueries, $select);
             }
 
             return $selectQueries;
         } else {
-            return $this->buildSelectQuery($dbname, "bans", $columns, $search, $order, $this->sid, true);
+            return $this->buildSelectQuery($dbname, "bans", $columns, $search, $order);
         }
     }
 
-    private function buildSelectQuery(string $dbname, string $tableName, array $columns, array $search, array $order, string $sid, bool $isBans = false)
+    private function buildSelectQuery(string $dbname, string $tableName, array $columns, array $search, array $order)
     {
         $select = dbal()->database($dbname)->table($tableName)->select()->columns([
             "$tableName.*",
-            'admins.name as admin_name',
             new Fragment("'$tableName' as source")
         ]);
 
@@ -307,18 +295,11 @@ class IKSDriver implements DriverInterface
             }
         }
 
-        // Join with admins table
-        $select->innerJoin('admins')->on(["$tableName.adminsid" => 'admins.sid']);
-
-        // Filter by server ID
-        $serverIdColumn = "$tableName.server_id";
-        $select->where($serverIdColumn, $sid);
-
         return $select;
     }
 
     public function getName(): string
     {
-        return "IKS Admin";
+        return "Pisex Admin";
     }
 }

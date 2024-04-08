@@ -36,5 +36,10 @@ return [
         'unbaned' => 'Разбанен',
         'session' => 'Сессия',
         'created' => 'Дата наказания'
+    ],
+    'profile' => [
+        'head' => 'Нарушения',
+        'no_info' => 'Нарушений нет 🔥',
+        'steam_not_connected' => 'У этого пользователя не привязан Steam 😢'
     ]
 ];

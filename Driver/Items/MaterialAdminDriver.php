@@ -41,7 +41,7 @@ class MaterialAdminDriver implements DriverInterface
             '),
             (new TableColumn('name', __('banscomms.table.loh'))),
             (new TableColumn('reason', __('banscomms.table.reason')))->setType('text'),
-            (new TableColumn('admin_name', __('banscomms.table.admin')))->setType('text'),
+            (new TableColumn('admin_name', __('banscomms.table.admin')))->setType('text')->setOrderable(false),
             (new TableColumn('ends'))->setType('text')->setVisible(false),
             (new TableColumn('length'))->setType('text')->setVisible(false),
             (new TableColumn('RemoveType'))->setType('text')->setVisible(false),
@@ -86,7 +86,7 @@ class MaterialAdminDriver implements DriverInterface
             '),
             (new TableColumn('name', __('banscomms.table.loh'))),
             (new TableColumn('reason', __('banscomms.table.reason')))->setType('text'),
-            (new TableColumn('admin_name', __('banscomms.table.admin')))->setType('text'),
+            (new TableColumn('admin_name', __('banscomms.table.admin')))->setType('text')->setOrderable(false),
             (new TableColumn('ends'))->setType('text')->setVisible(false),
             (new TableColumn('length'))->setType('text')->setVisible(false),
             (new TableColumn('RemoveType'))->setType('text')->setVisible(false),
@@ -113,10 +113,78 @@ class MaterialAdminDriver implements DriverInterface
         ];
     }
 
-    public function getUserStats(int $sid, User $user): array
-    {
-        // in the future
-        return [];
+    public function getUserBans(
+        User $user,
+        Server $server,
+        string $dbname,
+        int $page,
+        int $perPage,
+        int $draw,
+        array $columns = [],
+        array $search = [],
+        array $order = []
+    ): array {
+        $steam = $user->getSocialNetwork('Steam') ?? $user->getSocialNetwork('HttpsSteam');
+
+        $steam = steam()->steamid($steam->value)->RenderSteam2();
+
+        $select = $this->prepareSelectQuery($server, $dbname, $columns, $search, $order, 'bans')
+            ->where('bans.authid', 'like', '%' . substr($steam, 10) . '%');
+
+        // Применение пагинации
+        $paginator = new \Spiral\Pagination\Paginator($perPage);
+        $paginate = $paginator->withPage($page)->paginate($select);
+
+        // Получение данных
+        $result = $select->fetchAll();
+
+        // Формирование ответа
+        return [
+            'draw' => $draw,
+            'recordsTotal' => $paginate->count(),
+            'recordsFiltered' => $paginate->count(),
+            'data' => TablePreparation::normalize(
+                ['created', 'name', 'reason', 'admin_name', 'ends', 'length', 'RemoveType', 'RemovedOn', ''],
+                $result
+            )
+        ];
+    }
+
+    public function getUserComms(
+        User $user,
+        Server $server,
+        string $dbname,
+        int $page,
+        int $perPage,
+        int $draw,
+        array $columns = [],
+        array $search = [],
+        array $order = []
+    ): array {
+        $steam = $user->getSocialNetwork('Steam') ?? $user->getSocialNetwork('HttpsSteam');
+
+        $steam = steam()->steamid($steam->value)->RenderSteam2();
+
+        $select = $this->prepareSelectQuery($server, $dbname,$columns, $search, $order, 'comms')
+            ->where('comms.authid', 'like', '%' . substr($steam, 10) . '%');
+
+        // Применение пагинации
+        $paginator = new \Spiral\Pagination\Paginator($perPage);
+        $paginate = $paginator->withPage($page)->paginate($select);
+
+        // Получение данных
+        $result = $select->fetchAll();
+
+        // Формирование ответа
+        return [
+            'draw' => $draw,
+            'recordsTotal' => $paginate->count(),
+            'recordsFiltered' => $paginate->count(),
+            'data' => TablePreparation::normalize(
+                ['created', 'type', 'name', 'reason', 'admin_name', 'ends', 'length', 'RemoveType', 'RemovedOn', ''],
+                $result
+            )
+        ];
     }
 
     public function getComms(

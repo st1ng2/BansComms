@@ -5,25 +5,25 @@ return [
     'params_empty' => 'Some parameters are empty',
     'admin' => [
         'title' => 'Bans and Mutes',
-        'setting_description' => 'Here you can configure the association of bans and mutes with each server',
-        'add' => 'Add association',
+        'setting_description' => 'Here you can configure the binding of bans and mutes to each server',
+        'add' => 'Add Binding',
         'dbname' => 'Database Name',
         'dbname_desc' => 'This database will be used to display bans and mutes',
         'server' => 'Associated Server',
-        'add_description' => 'On this page, you can add a new association between the server and the database',
+        'add_description' => 'On this page, you can add a new binding between the server and the database',
         'mod' => 'Driver',
         'mod_desc' => 'Select the driver to be used for displaying bans and mutes',
         'server_label' => 'Server',
-        'edit_title' => 'Edit Association',
-        'edit_description' => 'On this page, you can edit the association for a specific server'
+        'edit_title' => 'Edit Binding',
+        'edit_description' => 'On this page, you can edit the binding for a specific server'
     ],
     'bans' => [
         'title' => 'Ban List',
-        'description' => 'This page displays all recent bans',
+        'description' => 'This page displays all the latest bans',
     ],
     'comms' => [
         'title' => 'Mute List',
-        'description' => 'This page displays all recent mutes',
+        'description' => 'This page displays all the latest mutes',
     ],
     'table' => [
         'end_date' => 'End Date',
@@ -34,6 +34,12 @@ return [
         'type' => 'Type', 
         'forever' => 'Forever',
         'unbaned' => 'Unbanned',
-        'session' => 'Session'
+        'session' => 'Session',
+        'created' => 'Punishment Date'
+    ],
+    'profile' => [
+        'head' => 'Violations',
+        'no_info' => 'No violations 🔥',
+        'steam_not_connected' => 'This user is not connected to Steam 😢'
     ]
 ];
