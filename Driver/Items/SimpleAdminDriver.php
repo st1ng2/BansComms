@@ -85,7 +85,7 @@ class SimpleAdminDriver implements DriverInterface
 
                 if (time == '0') {
                     return '<div class=\"ban-chip bans-forever\">'+ t(\"banscomms.table.forever\") +'</div>';
-                } else if (Date.now() >= ends * 1000 && time != '0') {
+                } else if (Date.now() >= new Date(ends) && time != '0') {
                     return '<div class=\"ban-chip bans-end\">' + secondsToReadable(time) + '</div>';
                 } else {
                     return '<div class=\"ban-chip\">' + secondsToReadable(time) + '</div>';
@@ -103,7 +103,7 @@ class SimpleAdminDriver implements DriverInterface
 
                 if (time == '0') {
                     return '<div class=\"ban-chip bans-forever\">'+ t(\"banscomms.table.forever\") +'</div>';
-                } else if (Date.now() >= ends * 1000 && time != '0') {
+                } else if (Date.now() >= new Date(ends) && time != '0') {
                     return '<div class=\"ban-chip bans-end\">' + secondsToReadable(time) + '</div>';
                 } else {
                     return '<div class=\"ban-chip\">' + secondsToReadable(time) + '</div>';
