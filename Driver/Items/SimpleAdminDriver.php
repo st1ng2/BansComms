@@ -88,7 +88,7 @@ class SimpleAdminDriver implements DriverInterface
                 } else if (Date.now() >= ends * 1000 && time != '0') {
                     return '<div class=\"ban-chip bans-end\">' + secondsToReadable(time) + '</div>';
                 } else {
-                    return secondsToReadable(time);
+                    return '<div class=\"ban-chip\">' + secondsToReadable(time) + '</div>';
                 }
             }
         ";
