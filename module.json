@@ -1,6 +1,6 @@
 {
     "name": "BansComms",
-    "version": "1.1",
+    "version": "1.1.1",
     "description": "Provides a list of bans or comms",
     "authors": ["Flames"],
     "providers": ["Flute\\Modules\\BansComms\\ServiceProviders\\BansCommsServiceProvider"],

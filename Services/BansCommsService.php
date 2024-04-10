@@ -8,6 +8,7 @@ use Flute\Modules\BansComms\Driver\DriverFactory;
 use Flute\Modules\BansComms\Driver\Items\IKSDriver;
 use Flute\Modules\BansComms\Driver\Items\MaterialAdminDriver;
 use Flute\Modules\BansComms\Driver\Items\PisexDriver;
+use Flute\Modules\BansComms\Driver\Items\SimpleAdminDriver;
 use Flute\Modules\BansComms\Exceptions\ModNotFoundException;
 use Flute\Modules\BansComms\Exceptions\ServerNotFoundException;
 
@@ -17,7 +18,8 @@ class BansCommsService
     protected array $defaultDrivers = [
         MaterialAdminDriver::class,
         IKSDriver::class,
-        PisexDriver::class
+        PisexDriver::class,
+        SimpleAdminDriver::class
     ];
 
     protected DriverFactory $driverFactory;
