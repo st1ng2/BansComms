@@ -1,11 +1,10 @@
 # BansComms Module for Flute CMS
 
 ## Overview
-BansComms is a robust module designed to seamlessly integrate with Flute CMS, providing detailed statistics and information regarding bans and mutes across various servers. This module is an essential tool for server administrators and moderators to monitor and manage player behavior effectively.
+BansComms is a robust module designed to seamlessly integrate with Flute CMS, providing detailed statistics and information regarding bans and mutes across various servers.
 
 ## Features
 - **Comprehensive Statistics**: Offers in-depth analytics of bans and mutes across all connected servers.
-- **Individual Tracking**: Allows for the monitoring of specific players, presenting individualized data and history.
 - **Flute CMS Compatibility**: Specifically tailored for integration with [Flute CMS](https://github.com/Flute-CMS/cms/tree/main), ensuring smooth functionality and user experience.
 
 ## Supported Admin Interfaces
