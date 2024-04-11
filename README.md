@@ -5,7 +5,7 @@ BansComms is a robust module designed to seamlessly integrate with Flute CMS, pr
 
 ## Features
 - **Comprehensive Statistics**: Offers in-depth analytics of bans and mutes across all connected servers.
-- **Flute CMS Compatibility**: Specifically tailored for integration with [Flute CMS](https://github.com/Flute-CMS/cms/tree/main), ensuring smooth functionality and user experience.
+- **Flute CMS Compatibility**: Specifically tailored for integration with [Flute CMS](https://github.com/Flute-CMS/cms), ensuring smooth functionality and user experience.
 
 ## Supported Admin Interfaces
 BansComms is compatible with a variety of administrative tools, including:
