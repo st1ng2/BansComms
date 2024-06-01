@@ -4,6 +4,7 @@ namespace Flute\Modules\BansComms\Contracts;
 
 use Flute\Core\Database\Entities\Server;
 use Flute\Core\Database\Entities\User;
+use Flute\Core\Table\TableBuilder;
 use Flute\Core\Table\TableColumn;
 
 /**
@@ -15,17 +16,13 @@ interface DriverInterface
 {
     /**
      * Get the table columns for communications.
-     *
-     * @return array[TableColumn] Array of TableColumn instances for communications.
      */
-    public function getCommsColumns(): array;
+    public function getCommsColumns(TableBuilder $tableBuilder);
 
     /**
      * Get the table columns for bans.
-     *
-     * @return array[TableColumn] Array of TableColumn instances for bans.
      */
-    public function getBansColumns(): array;
+    public function getBansColumns(TableBuilder $tableBuilder);
 
     /**
      * Retrieve a paginated list of bans.
@@ -133,4 +130,13 @@ interface DriverInterface
         array $search = [],
         array $order = []
     ): array;
+
+    /**
+     * Get the total counts of bans, mutes, and gags.
+     *
+     * @param string $dbname Database name.
+     * 
+     * @return array An array with the counts of bans, mutes, and gags.
+     */
+    public function getCounts(string $dbname, array &$excludeAdmins = []): array;
 }

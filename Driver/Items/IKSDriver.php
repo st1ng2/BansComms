@@ -4,125 +4,40 @@ namespace Flute\Modules\BansComms\Driver\Items;
 
 use Flute\Core\Database\Entities\Server;
 use Flute\Core\Database\Entities\User;
-use Flute\Core\Table\TableColumn;
+use Flute\Core\Table\TableBuilder;
 use Flute\Core\Table\TablePreparation;
 use Flute\Modules\BansComms\Contracts\DriverInterface;
-use Spiral\Database\Injection\Expression;
-use Spiral\Database\Injection\Fragment;
+use Flute\Modules\BansComms\Driver\Items\IKS\ColumnManager\TableColumnManager;
+use Flute\Modules\BansComms\Driver\Items\IKS\Formatter\ColumnFormatter;
+use Flute\Modules\BansComms\Driver\Items\IKS\Manager\UserManagement;
+use Flute\Modules\BansComms\Driver\Items\IKS\QueryBuilder\QueryBuilder;
+use Spiral\Database\Exception\StatementException;
 use Spiral\Database\Injection\Parameter;
+
 
 class IKSDriver implements DriverInterface
 {
-    protected int $sid = 1;
+    private $sid;
+    private $columnManager;
+    private $queryBuilder;
+    private $userManagement;
 
     public function __construct(array $config = [])
     {
-        $this->sid = isset($config['sid']) ? (int) $config['sid'] : 1;
+        $this->sid = isset($config['sid']) ? $config['sid'] : 1;
+        $this->columnManager = new TableColumnManager(new ColumnFormatter);
+        $this->queryBuilder = new QueryBuilder($this->sid);
+        $this->userManagement = new UserManagement;
     }
 
-    public function getCommsColumns(): array
+    public function getCommsColumns(TableBuilder $tableBuilder)
     {
-        return [
-            (new TableColumn('created', __('banscomms.table.created')))
-                ->setRender("{{CREATED}}", $this->dateFormatRender()),
-            (new TableColumn('source', __('banscomms.table.type')))
-                ->setRender("{{ICON_TYPE}}", $this->typeFormatRender()),
-            new TableColumn('name', __('banscomms.table.loh')),
-            (new TableColumn('reason', __('banscomms.table.reason')))->setType('text'),
-            (new TableColumn('admin_name', __('banscomms.table.admin')))->setType('text')->setOrderable(false),
-            (new TableColumn('end', __('banscomms.table.end_date')))->setType('text')
-                ->setRender("{{ENDS}}", $this->dateFormatRender()),
-            (new TableColumn('time', ''))->setType('text')->setVisible(false),
-            (new TableColumn('Unbanned', ''))->setType('text')->setVisible(false),
-            (new TableColumn('UnbannedBy', ''))->setType('text')->setVisible(false),
-            (new TableColumn('', __('banscomms.table.length')))
-                ->setSearchable(false)->setOrderable(false)
-                ->setRender('{{KEY}}', $this->timeFormatRender()),
-        ];
+        return $this->columnManager->getCommsColumns($tableBuilder);
     }
 
-    public function getBansColumns(): array
+    public function getBansColumns(TableBuilder $tableBuilder)
     {
-        return [
-            (new TableColumn('created', __('banscomms.table.created')))
-                ->setRender("{{CREATED}}", $this->dateFormatRender()),
-            new TableColumn('name', __('banscomms.table.loh')),
-            (new TableColumn('reason', __('banscomms.table.reason')))->setType('text'),
-            (new TableColumn('admin_name', __('banscomms.table.admin')))->setType('text')->setOrderable(false),
-            (new TableColumn('end', __('banscomms.table.end_date')))->setType('text')
-                ->setRender("{{ENDS}}", $this->dateFormatRender()),
-            (new TableColumn('time', ''))->setType('text')->setVisible(false),
-            (new TableColumn('Unbanned', ''))->setType('text')->setVisible(false),
-            (new TableColumn('UnbannedBy', ''))->setType('text')->setVisible(false),
-            (new TableColumn('', __('banscomms.table.length')))
-                ->setSearchable(false)->setOrderable(false)
-                ->setRender('{{KEY}}', $this->timeFormatRenderBans()),
-        ];
-    }
-
-    private function dateFormatRender(): string
-    {
-        return '
-            function(data, type) {
-                if (type === "display") {
-                    let date = new Date(data * 1000);
-                    return ("0" + (date.getMonth() + 1)).slice(-2) + "-" +
-                           ("0" + date.getDate()).slice(-2) + "-" +
-                           date.getFullYear() + " " +
-                           ("0" + date.getHours()).slice(-2) + ":" +
-                           ("0" + date.getMinutes()).slice(-2);
-                }
-                return data;
-            }
-        ';
-    }
-
-    private function typeFormatRender(): string
-    {
-        return '
-            function(data, type) {
-                if (type === "display") {
-                    return data == "mutes" ? `<i class="type-icon ph-bold ph-microphone-slash"></i>` : `<i class="type-icon ph-bold ph-chat-circle-dots"></i>`;
-                }
-                return data;
-            }
-        ';
-    }
-
-    private function timeFormatRender(): string
-    {
-        return "
-            function(data, type, full) {
-                let time = full[6];
-                let ends = full[5];
-
-                if (time == '0') {
-                    return '<div class=\"ban-chip bans-forever\">'+ t(\"banscomms.table.forever\") +'</div>';
-                } else if (Date.now() >= ends * 1000 && time != '0') {
-                    return '<div class=\"ban-chip bans-end\">' + secondsToReadable(time) + '</div>';
-                } else {
-                    return '<div class=\"ban-chip\">' + secondsToReadable(time) + '</div>';
-                }
-            }
-        ";
-    }
-
-    private function timeFormatRenderBans(): string
-    {
-        return "
-            function(data, type, full) {
-                let time = full[5];
-                let ends = full[4];
-
-                if (time == '0') {
-                    return '<div class=\"ban-chip bans-forever\">'+ t(\"banscomms.table.forever\") +'</div>';
-                } else if (Date.now() >= ends * 1000 && time != '0') {
-                    return '<div class=\"ban-chip bans-end\">' + secondsToReadable(time) + '</div>';
-                } else {
-                    return '<div class=\"ban-chip\">' + secondsToReadable(time) + '</div>';
-                }
-            }
-        ";
+        return $this->columnManager->getBansColumns($tableBuilder);
     }
 
     public function getUserBans(
@@ -138,23 +53,44 @@ class IKSDriver implements DriverInterface
     ): array {
         $steam = $user->getSocialNetwork('Steam') ?? $user->getSocialNetwork('HttpsSteam');
 
-        $select = $this->prepareSelectQuery($server, $dbname, $columns, $search, $order, 'bans')
+        if (!$steam)
+            return [];
+
+        $select = $this->queryBuilder->prepareSelectQuery($server, $dbname, $columns, $search, $order, 'bans')
             ->where('bans.sid', (int) $steam->value);
 
-        // Применение пагинации
         $paginator = new \Spiral\Pagination\Paginator($perPage);
         $paginate = $paginator->withPage($page)->paginate($select);
 
-        // Получение данных
         $result = $select->fetchAll();
 
-        // Формирование ответа
+        $steamIds = $this->getSteamIds64($result);
+        $usersData = steam()->getUsers($steamIds);
+
+        $result = $this->mapUsersDataToResult($result, $usersData);
+
         return [
             'draw' => $draw,
             'recordsTotal' => $paginate->count(),
             'recordsFiltered' => $paginate->count(),
             'data' => TablePreparation::normalize(
-                ['created', 'name', 'reason', 'admin_name', 'end', 'time', 'Unbanned', 'UnbannedBy', ''],
+                [
+                    'user_url',
+                    'avatar',
+                    'name',
+                    '',
+                    'created',
+                    'reason',
+                    'admin_url',
+                    'admin_avatar',
+                    'admin_name',
+                    '',
+                    'end',
+                    'time',
+                    'Unbanned',
+                    'UnbannedBy',
+                    ''
+                ],
                 $result
             )
         ];
@@ -173,25 +109,48 @@ class IKSDriver implements DriverInterface
     ): array {
         $steam = $user->getSocialNetwork('Steam') ?? $user->getSocialNetwork('HttpsSteam');
 
-        list($selectMutes, $selectGags) = $this->prepareSelectQuery($server, $dbname, $columns, $search, $order, 'comms');
+        if (!$steam)
+            return [];
+
+        list($selectMutes, $selectGags) = $this->queryBuilder->prepareSelectQuery($server, $dbname, $columns, $search, $order, 'comms');
 
         $selectMutes->where('mutes.sid', (int) $steam->value);
         $selectGags->where('gags.sid', (int) $steam->value);
 
-        // Fetch results separately for mutes and gags
         $resultMutes = $selectMutes->fetchAll();
         $resultGags = $selectGags->fetchAll();
 
-        // Merge and slice the results according to pagination
         $mergedResults = array_merge($resultMutes, $resultGags);
         $paginatedResults = array_slice($mergedResults, ($page - 1) * $perPage, $perPage);
+
+        $steamIds = $this->getSteamIds64($paginatedResults);
+        $usersData = steam()->getUsers($steamIds);
+
+        $paginatedResults = $this->mapUsersDataToResult($paginatedResults, $usersData);
 
         return [
             'draw' => $draw,
             'recordsTotal' => count($mergedResults),
             'recordsFiltered' => count($mergedResults),
             'data' => TablePreparation::normalize(
-                ['created', 'source', 'name', 'reason', 'admin_name', 'end', 'time', 'Unbanned', ''],
+                [
+                    'source',
+                    'user_url',
+                    'avatar',
+                    'name',
+                    '',
+                    'created',
+                    'reason',
+                    'admin_url',
+                    'admin_avatar',
+                    'admin_name',
+                    '',
+                    'end',
+                    'time',
+                    'Unbanned',
+                    'UnbannedBy',
+                    ''
+                ],
                 $paginatedResults
             )
         ];
@@ -207,22 +166,42 @@ class IKSDriver implements DriverInterface
         array $search = [],
         array $order = []
     ): array {
-        list($selectMutes, $selectGags) = $this->prepareSelectQuery($server, $dbname, $columns, $search, $order, 'comms');
+        list($selectMutes, $selectGags) = $this->queryBuilder->prepareSelectQuery($server, $dbname, $columns, $search, $order, 'comms');
 
-        // Fetch results separately for mutes and gags
         $resultMutes = $selectMutes->fetchAll();
         $resultGags = $selectGags->fetchAll();
 
-        // Merge and slice the results according to pagination
         $mergedResults = array_merge($resultMutes, $resultGags);
         $paginatedResults = array_slice($mergedResults, ($page - 1) * $perPage, $perPage);
+
+        $steamIds = $this->getSteamIds64($paginatedResults);
+        $usersData = steam()->getUsers($steamIds);
+
+        $paginatedResults = $this->mapUsersDataToResult($paginatedResults, $usersData);
 
         return [
             'draw' => $draw,
             'recordsTotal' => count($mergedResults),
             'recordsFiltered' => count($mergedResults),
             'data' => TablePreparation::normalize(
-                ['created', 'source', 'name', 'reason', 'admin_name', 'end', 'time', 'Unbanned', ''],
+                [
+                    'source',
+                    'user_url',
+                    'avatar',
+                    'name',
+                    '',
+                    'created',
+                    'reason',
+                    'admin_url',
+                    'admin_avatar',
+                    'admin_name',
+                    '',
+                    'end',
+                    'time',
+                    'Unbanned',
+                    'UnbannedBy',
+                    ''
+                ],
                 $paginatedResults
             )
         ];
@@ -238,87 +217,175 @@ class IKSDriver implements DriverInterface
         array $search = [],
         array $order = []
     ): array {
-        $select = $this->prepareSelectQuery($server, $dbname, $columns, $search, $order);
+        $select = $this->queryBuilder->prepareSelectQuery($server, $dbname, $columns, $search, $order);
 
         $paginator = new \Spiral\Pagination\Paginator($perPage);
         $paginate = $paginator->withPage($page)->paginate($select);
 
         $result = $select->fetchAll();
 
+        $steamIds = $this->getSteamIds64($result);
+        $usersData = steam()->getUsers($steamIds);
+
+        $result = $this->mapUsersDataToResult($result, $usersData);
+
         return [
             'draw' => $draw,
             'recordsTotal' => $paginate->count(),
             'recordsFiltered' => $paginate->count(),
             'data' => TablePreparation::normalize(
-                ['created', 'name', 'reason', 'admin_name', 'end', 'time', 'Unbanned', 'UnbannedBy', ''],
+                [
+                    'user_url',
+                    'avatar',
+                    'name',
+                    '',
+                    'created',
+                    'reason',
+                    'admin_url',
+                    'admin_avatar',
+                    'admin_name',
+                    '',
+                    'end',
+                    'time',
+                    'Unbanned',
+                    'UnbannedBy',
+                    ''
+                ],
                 $result
             )
         ];
     }
 
-    private function prepareSelectQuery(Server $server, string $dbname, array $columns, array $search, array $order, string $table = 'bans')
+    public function getCounts(string $dbname, array &$excludeAdmins = []): array
     {
-        if ($table === 'comms') {
-            // Initialize an array to hold select queries
-            $selectQueries = [];
+        $db = dbal()->database($dbname);
 
-            foreach (['mutes', 'gags'] as $tableName) {
-                $select = $this->buildSelectQuery($dbname, $tableName, $columns, $search, $order, $this->sid);
-                array_push($selectQueries, $select);
+        $bansCount = $db->table('bans')->select()->innerJoin('admins');
+        $mutesCount = $db->table('mutes')->select()->innerJoin('admins');
+        $gagsCount = $db->table('gags')->select()->innerJoin('admins');
+
+        if (!empty($excludeAdmins)) {
+            $bansCount->andWhere([
+                'admins.adminsid' => [
+                    'NOT IN' => new Parameter(($excludeAdmins))
+                ]
+            ]);
+            $mutesCount->andWhere([
+                'admins.adminsid' => [
+                    'NOT IN' => new Parameter(($excludeAdmins))
+                ]
+            ]);
+            $gagsCount->andWhere([
+                'admins.adminsid' => [
+                    'NOT IN' => new Parameter(($excludeAdmins))
+                ]
+            ]);
+        }
+
+        try {
+            $uniqueAdmins = $db->table('admins')->select()->distinct()->columns('sid');
+
+            $newAdmins = [];
+            foreach ($uniqueAdmins->fetchAll() as $admin) {
+                if (!in_array($admin['sid'], $excludeAdmins)) {
+                    $excludeAdmins[] = $admin['sid'];
+                    $newAdmins[] = $admin['sid'];
+                }
             }
 
-            return $selectQueries;
-        } else {
-            return $this->buildSelectQuery($dbname, "bans", $columns, $search, $order, $this->sid, true);
+            return [
+                'bans' => $bansCount->count(),
+                'mutes' => $mutesCount->count(),
+                'gags' => $gagsCount->count(),
+                'admins' => sizeof($newAdmins)
+            ];
+        } catch (StatementException $e) {
+            // logs()->error($e);
+
+            return [
+                'bans' => 0,
+                'mutes' => 0,
+                'gags' => 0,
+                'admins' => 0
+            ];
         }
     }
 
-    private function buildSelectQuery(string $dbname, string $tableName, array $columns, array $search, array $order, string $sid, bool $isBans = false)
+    private function getSteamIds64(array $results): array
     {
-        $select = dbal()->database($dbname)->table($tableName)->select()->columns([
-            "$tableName.*",
-            'admins.name as admin_name',
-            new Fragment("'$tableName' as source")
-        ]);
+        $steamIds64 = [];
 
-        // Applying column-based search
-        foreach ($columns as $column) {
-            if ($column['searchable'] === 'true' && !empty($column['search']['value'])) {
-                $select->where($column['name'], 'like', '%' . $column['search']['value'] . '%');
+        foreach ($results as $result) {
+            try {
+                if (!isset($steamIds64[$result['sid']])) {
+                    $steamId64 = steam()->steamid($result['sid'])->ConvertToUInt64();
+                    $steamIds64[$result['sid']] = $steamId64;
+                }
+
+                if (!isset($steamIds64[$result['adminsid']])) {
+                    $steamId64 = steam()->steamid($result['adminsid'])->ConvertToUInt64();
+                    $steamIds64[$result['adminsid']] = $steamId64;
+                }
+            } catch (\InvalidArgumentException $e) {
+                logs()->error($e);
+                unset($result);
             }
         }
 
-        // Applying global search
-        if (isset($search['value']) && !empty($search['value'])) {
-            $select->where(function ($select) use ($search, $tableName) {
-                $select->where("$tableName.name", 'like', '%' . $search['value'] . '%')
-                    ->orWhere("$tableName.reason", 'like', '%' . $search['value'] . '%');
-            });
-        }
+        return $steamIds64;
+    }
 
-        // Applying ordering
-        foreach ($order as $orderItem) {
-            $columnIndex = $orderItem['column'];
-            $columnName = $columns[$columnIndex]['name'];
-            $direction = strtolower($orderItem['dir']) === 'asc' ? 'ASC' : 'DESC';
+    private function mapUsersDataToResult(array $results, array $usersData): array
+    {
+        $mappedResults = [];
 
-            if ($columns[$columnIndex]['orderable'] === 'true') {
-                $select->orderBy("$tableName.$columnName", $direction);
+        foreach ($results as $result) {
+            $steamId32 = $result['sid'];
+
+            if (isset($usersData[$steamId32])) {
+                $user = $usersData[$steamId32];
+                $result['sid'] = $usersData[$steamId32]->steamid;
+                $result['avatar'] = $user->avatar;
+            } else {
+                $result['avatar'] = url('assets/img/no_avatar.webp')->get();
             }
+
+            $result['user_url'] = url('profile/search/' . $result['sid'])->addParams([
+                "else-redirect" => "https://steamcommunity.com/profiles/" . $result['sid']
+            ])->get();
+
+            $result['admin_url'] = url('profile/search/' . $result['adminsid'])->addParams([
+                "else-redirect" => "https://steamcommunity.com/profiles/" . $result['adminsid']
+            ])->get();
+
+            $adminSteam = $result['adminsid'];
+
+            if (isset($usersData[$adminSteam])) {
+                $user = $usersData[$adminSteam];
+                $result['adminsid'] = $usersData[$adminSteam]->steamid;
+                $result['admin_avatar'] = $user->avatar;
+            } else {
+                $result['admin_avatar'] = url('assets/img/no_avatar.webp')->get();
+            }
+
+            $mappedResults[] = $result;
         }
 
-        // Join with admins table
-        $select->innerJoin('admins')->on(["$tableName.adminsid" => 'admins.sid']);
+        return $mappedResults;
+    }
 
-        // Filter by server ID
-        $serverIdColumn = "$tableName.server_id";
-        $select->where($serverIdColumn, $sid);
+    public function banUser($steamid, $reason, $time = 0, $type = "bans"): bool
+    {
+        return $this->userManagement->banUser($steamid, $reason, $time, $type);
+    }
 
-        return $select;
+    public function unbanUser($bid, $type = "bans"): bool
+    {
+        return $this->userManagement->unbanUser($bid, $type);
     }
 
     public function getName(): string
     {
-        return "IKS Admin";
+        return "IKSAdmin";
     }
 }

@@ -32,21 +32,5 @@ class RoutesExtension implements \Flute\Core\Contracts\ModuleExtensionInterface
                 $userRouteGroup->get('comms/{id}/{sid}', [ApiCommsController::class, 'getUserData']);
             }, '/user/');
         }, 'banscomms');
-
-        router()->group(function (RouteGroup $routeGroup) {
-            $routeGroup->middleware(HasPermissionMiddleware::class);
-
-            $routeGroup->group(function (RouteGroup $news) {
-                $news->get('list', [ViewAdminBansCommsController::class, 'list']);
-                $news->get('add', [ViewAdminBansCommsController::class, 'add']);
-                $news->get('edit/{id}', [ViewAdminBansCommsController::class, 'update']);
-            }, 'banscomms/');
-        
-            $routeGroup->group(function (RouteGroup $news) {
-                $news->post('add', [AdminBansCommsController::class, 'store']);
-                $news->put('{id}', [AdminBansCommsController::class, 'update']);
-                $news->delete('{id}', [AdminBansCommsController::class, 'delete']);
-            }, 'api/banscomms/');
-        }, 'admin/');
     }
 }

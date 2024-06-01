@@ -89,7 +89,7 @@ class ViewAdminBansCommsController extends AbstractController
 
     protected function getServers(): array
     {
-        $servers = rep(Server::class)->select();
+        $servers = rep(Server::class)->select()->where('enabled', true);
         $drivers = rep(DatabaseConnection::class)->select();
 
         foreach ($this->getDrivers() as $key => $driver) {

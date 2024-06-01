@@ -5,28 +5,18 @@ namespace Flute\Modules\BansComms\Services;
 use Flute\Core\Database\Entities\DatabaseConnection;
 use Flute\Core\Database\Entities\User;
 use Flute\Modules\BansComms\Driver\DriverFactory;
-use Flute\Modules\BansComms\Driver\Items\IKSDriver;
-use Flute\Modules\BansComms\Driver\Items\MaterialAdminDriver;
-use Flute\Modules\BansComms\Driver\Items\PisexDriver;
-use Flute\Modules\BansComms\Driver\Items\SimpleAdminDriver;
 use Flute\Modules\BansComms\Exceptions\ModNotFoundException;
 use Flute\Modules\BansComms\Exceptions\ServerNotFoundException;
 
 class BansCommsService
 {
     protected array $serverModes = [];
-    protected array $defaultDrivers = [
-        MaterialAdminDriver::class,
-        IKSDriver::class,
-        PisexDriver::class,
-        SimpleAdminDriver::class
-    ];
-
     protected DriverFactory $driverFactory;
     protected const CACHE_KEY = 'flute.banscomms.servers';
     protected const CACHE_TIME = 3600;
 
     /**
+     * BansCommsService constructor.
      *
      * @param DriverFactory $driverFactory Factory for creating driver instances.
      */
@@ -42,6 +32,8 @@ class BansCommsService
      * Generates a table for the given server ID.
      *
      * @param int|null $sid Server ID.
+     * @param string $type Type of table, 'bans' or 'comms'.
+     * @param User|null $user User instance.
      * @return mixed Table rendering result.
      * @throws \Exception If the module is not configured or server is not found.
      */
@@ -53,16 +45,13 @@ class BansCommsService
 
         $factory = $this->getDriverFactory($server);
 
-        $url = null;
-
-        if( $user ) {
-            $url = $type === 'bans' ? "banscomms/user/{$user->id}/{$server['server']->id}" : "banscomms/user/comms/{$user->id}/{$server['server']->id}";
-        } else {
-            $url = $type === 'bans' ? "banscomms/get/{$server['server']->id}" : "banscomms/get/comms/{$server['server']->id}";
-        }
+        $url = $user ?
+            ($type === 'bans' ? "banscomms/user/{$user->id}/{$server['server']->id}" : "banscomms/user/comms/{$user->id}/{$server['server']->id}") :
+            ($type === 'bans' ? "banscomms/get/{$server['server']->id}" : "banscomms/get/comms/{$server['server']->id}");
 
         $table = table(url($url));
-        $table->addColumns($type === 'bans' ? $factory->getBansColumns() : $factory->getCommsColumns());
+
+        $type === 'bans' ? $factory->getBansColumns($table) : $factory->getCommsColumns($table);
 
         return $table->render();
     }
@@ -81,7 +70,6 @@ class BansCommsService
 
         try {
             $serverConfig = $this->getServerFromModes($sid);
-
             $factory = $this->getDriverFactory($serverConfig);
 
             return $factory->getUserBans(
@@ -114,7 +102,6 @@ class BansCommsService
 
         try {
             $serverConfig = $this->getServerFromModes($sid);
-
             $factory = $this->getDriverFactory($serverConfig);
 
             return $factory->getUserComms(
@@ -144,14 +131,15 @@ class BansCommsService
     {
         $dbConnection = rep(DatabaseConnection::class)->findOne(['server_id' => $sid]);
 
-        if (!$dbConnection)
+        if (!$dbConnection) {
             throw new ModNotFoundException($sid);
+        }
 
         return $dbConnection->mod;
     }
 
     /**
-     * Get all server modes
+     * Get all server modes.
      * 
      * @return array
      */
@@ -161,12 +149,71 @@ class BansCommsService
     }
 
     /**
+     * Get the total counts of bans, mutes, and gags across all servers, excluding specific admins.
+     *
+     * @param array $excludeAdmins Array of SteamIDs to exclude from counts.
+     * @return array An array with the total counts of bans, mutes, gags, and unique admins.
+     */
+    public function getCountsForAllServers(array &$excludeAdmins = []): array
+    {
+        $this->validateServerModes();
+
+        $totalCounts = [
+            'bans' => 0,
+            'mutes' => 0,
+            'gags' => 0,
+            'admins' => 0
+        ];
+
+        foreach ($this->serverModes as $serverMode) {
+            $serverCounts = $this->getCounts($serverMode['server']->id, $excludeAdmins);
+
+            $totalCounts['bans'] += $serverCounts['bans'];
+            $totalCounts['mutes'] += $serverCounts['mutes'];
+            $totalCounts['gags'] += $serverCounts['gags'];
+            $totalCounts['admins'] += $serverCounts['admins'];
+        }
+
+        return $totalCounts;
+    }
+
+    /**
+     * Get the total counts of bans, mutes, and gags, excluding specific admins.
+     *
+     * @param int|null $sid Server ID.
+     * @param array $excludeAdmins Array of SteamIDs to exclude from counts.
+     * @return array An array with the counts of bans, mutes, gags, and unique admins.
+     * @throws \Exception If the module is not configured or server is not found.
+     */
+    public function getCounts(?int $sid = null, array &$excludeAdmins = []): array
+    {
+        $this->validateServerModes();
+
+        $server = $this->getServerFromModes($sid);
+        $factory = $this->getDriverFactory($server);
+
+        return $factory->getCounts($server['db'], $excludeAdmins);
+    }
+
+    /**
      * Imports and registers drivers to the factory.
      */
     protected function importDrivers(): void
     {
-        foreach ($this->defaultDrivers as $driver) {
-            $this->driverFactory->registerDriver($driver, $driver);
+        $driversNamespace = 'Flute\\Modules\\BansComms\\Driver\\Items\\';
+        $driversPath = BASE_PATH . 'app/Modules/BansComms/Driver/Items';
+
+        $finder = finder()->files()->in($driversPath)->name('*.php');
+
+        foreach ($finder as $file) {
+            $className = $driversNamespace . $file->getBasename('.php');
+
+            if (class_exists($className)) {
+                $driverInstance = new $className();
+                if (method_exists($driverInstance, 'getName')) {
+                    $this->driverFactory->registerDriver($driverInstance->getName(), $className);
+                }
+            }
         }
     }
 
@@ -197,6 +244,26 @@ class BansCommsService
         if (empty($this->serverModes)) {
             throw new \Exception(__('banscomms.module_is_not_configured'));
         }
+    }
+
+    /**
+     * Get the server mode driver normal key
+     * 
+     * @return string|null
+     */
+    protected function getServerModeDriver(string $driver)
+    {
+        $drivers = $this->driverFactory->getAllDrivers();
+
+        if (isset($drivers[$driver])) {
+            return $driver;
+        }
+
+        if ($search = array_search($driver, $drivers)) {
+            return $search;
+        }
+
+        return null;
     }
 
     /**
@@ -251,7 +318,7 @@ class BansCommsService
         $drivers = $this->driverFactory->getAllDrivers();
 
         foreach ($drivers as $key => $driver) {
-            $modes = $modes->orWhere('mod', $key);
+            $modes = $modes->orWhere('mod', $key)->orWhere('mod', $driver);
         }
 
         $modes = $modes->fetchAll();
@@ -264,7 +331,7 @@ class BansCommsService
             $this->serverModes[$mode->server->id] = [
                 'server' => $mode->server,
                 'db' => $mode->dbname,
-                'factory' => $mode->mod,
+                'factory' => $this->getServerModeDriver($mode->mod),
                 'additional' => $mode->additional ? \Nette\Utils\Json::decode($mode->additional) : [],
             ];
         }

@@ -1,0 +1,58 @@
+.bans-blocks-container {
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.bans-main-block {
+    flex: 1 0;
+    padding: 20px 25px;
+    border-radius: $border-radius;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid $color-white-5;
+    min-width: 250px;
+
+    &.admins {
+        --text-color: #{$color-primary};
+    }
+
+    &.bans {
+        --text-color: #{$color-error};
+    }
+
+    &.comms {
+        --text-color: #{$color-warning};
+    }
+
+    &.gags {
+        --text-color: #{$color-secondary};
+    }
+
+    background: $color-card;
+
+    > i {
+        position: absolute;
+        right: -35px;
+        font-size: 100px;
+        color: var(--text-color);
+        top: 5px;
+        transform: rotate(15deg);
+        opacity: .3;
+    }
+
+    &-content {
+        > p {
+            font-weight: 500;
+            opacity: .5;
+            color: inherit;
+        }
+
+        > h2 {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+    }
+}
