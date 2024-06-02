@@ -256,31 +256,55 @@ class IKSDriver implements DriverInterface
         ];
     }
 
-    public function getCounts(string $dbname, array &$excludeAdmins = []): array
+    public function getCounts(string $dbname, array &$excludeAdmins = [], bool $wasAll = false): array
     {
         $db = dbal()->database($dbname);
 
-        $bansCount = $db->table('bans')->select()->innerJoin('admins');
-        $mutesCount = $db->table('mutes')->select()->innerJoin('admins');
-        $gagsCount = $db->table('gags')->select()->innerJoin('admins');
+        $bansCount = $db->table('bans')->select();
+        $mutesCount = $db->table('mutes')->select();
+        $gagsCount = $db->table('gags')->select();
 
         if (!empty($excludeAdmins)) {
             $bansCount->andWhere([
-                'admins.adminsid' => [
+                'adminsid' => [
                     'NOT IN' => new Parameter(($excludeAdmins))
                 ]
             ]);
             $mutesCount->andWhere([
-                'admins.adminsid' => [
+                'adminsid' => [
                     'NOT IN' => new Parameter(($excludeAdmins))
                 ]
             ]);
             $gagsCount->andWhere([
-                'admins.adminsid' => [
+                'adminsid' => [
                     'NOT IN' => new Parameter(($excludeAdmins))
                 ]
             ]);
         }
+
+        $bansCount->where(function ($select) use ($wasAll) {
+            $select->where("bans.server_id", $this->sid);
+
+            if (!$wasAll) {
+                $select->orWhere("bans.server_id", '');
+            }
+        });
+
+        $mutesCount->where(function ($select) use ($wasAll) {
+            $select->where("mutes.server_id", $this->sid);
+
+            if (!$wasAll) {
+                $select->orWhere("mutes.server_id", '');
+            }
+        });
+
+        $gagsCount->where(function ($select) use ($wasAll) {
+            $select->where("gags.server_id", $this->sid);
+
+            if (!$wasAll) {
+                $select->orWhere("gags.server_id", '');
+            }
+        });
 
         try {
             $uniqueAdmins = $db->table('admins')->select()->distinct()->columns('sid');
@@ -300,7 +324,7 @@ class IKSDriver implements DriverInterface
                 'admins' => sizeof($newAdmins)
             ];
         } catch (StatementException $e) {
-            // logs()->error($e);
+            logs()->error($e);
 
             return [
                 'bans' => 0,

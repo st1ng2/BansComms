@@ -77,9 +77,17 @@ class MaterialAdminDriver implements DriverInterface
     {
         return "
             function(data, type, full) {
-                let time = full[11];
+
+                ".($isBans ? "
+                let length = full[11];
                 let ends = full[10];
                 let removeType = full[12];
+                " : "
+                let length = full[12];
+                let ends = full[11];
+                let removeType = full[13];
+                ")."
+                
 
                 if (length == '0' && removeType != 'U') {
                     return '<div class=\"ban-chip bans-forever\">'+ t(\"banscomms.table.forever\") +'</div>';
@@ -393,7 +401,7 @@ class MaterialAdminDriver implements DriverInterface
         return $select;
     }
 
-    public function getCounts(string $dbname, array &$excludeAdmins = []): array
+    public function getCounts(string $dbname, array &$excludeAdmins = [], bool $wasAll = false): array
     {
         $db = dbal()->database($dbname);
 

@@ -401,27 +401,27 @@ class PisexDriver implements DriverInterface
         return $select;
     }
 
-    public function getCounts(string $dbname, array &$excludeAdmins = []): array
+    public function getCounts(string $dbname, array &$excludeAdmins = [], bool $wasAll = false): array
     {
         $db = dbal()->database($dbname);
 
-        $bansCount = $db->table('bans')->select()->innerJoin('admins');
-        $mutesCount = $db->table('mutes')->select()->innerJoin('admins');
-        $gagsCount = $db->table('gags')->select()->innerJoin('admins');
+        $bansCount = $db->table('bans')->select();
+        $mutesCount = $db->table('mutes')->select();
+        $gagsCount = $db->table('gags')->select();
 
         if (!empty($excludeAdmins)) {
             $bansCount->andWhere([
-                'admins.steamid' => [
+                'admin_steamid' => [
                     'NOT IN' => new Parameter($excludeAdmins)
                 ]
             ]);
             $mutesCount->andWhere([
-                'admins.steamid' => [
+                'admin_steamid' => [
                     'NOT IN' => new Parameter($excludeAdmins)
                 ]
             ]);
             $gagsCount->andWhere([
-                'admins.steamid' => [
+                'admin_steamid' => [
                     'NOT IN' => new Parameter($excludeAdmins)
                 ]
             ]);

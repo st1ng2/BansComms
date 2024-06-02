@@ -9,7 +9,7 @@ class QueryBuilder
 {
     private $sid;
 
-    public function __construct(int $sid)
+    public function __construct($sid)
     {
         $this->sid = $sid;
     }

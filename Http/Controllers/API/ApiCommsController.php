@@ -23,7 +23,7 @@ class ApiCommsController extends AbstractController
         $search = $request->get("search", []);
         $order = $request->get("order", []);
 
-        $length = (int) $request->get('length') > 100 ? : (int) $request->get('length');
+        $length = (int) $request->get('length') > 100 ?: (int) $request->get('length');
 
         try {
             $data = $this->commsService->getUserData(
@@ -40,7 +40,7 @@ class ApiCommsController extends AbstractController
             return $this->json($data);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
-        } 
+        }
     }
 
     public function getData(FluteRequest $request, $sid)
@@ -51,7 +51,7 @@ class ApiCommsController extends AbstractController
         $search = $request->get("search", []);
         $order = $request->get("order", []);
 
-        $length = (int) $request->get('length') > 100 ? : (int) $request->get('length');
+        $length = (int) $request->get('length') > 100 ?: (int) $request->get('length');
 
         try {
             $data = $this->commsService->getData(
@@ -66,7 +66,11 @@ class ApiCommsController extends AbstractController
 
             return $this->json($data);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        } 
+            if (is_debug()) {
+                return $this->error($e->getMessage(), 500);
+            }
+
+            return $this->error(__('def.unknown_error'), 500);
+        }
     }
 }

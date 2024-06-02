@@ -387,27 +387,27 @@ class SimpleAdminDriver implements DriverInterface
         return $select;
     }
 
-    public function getCounts(string $dbname, array &$excludeAdmins = []): array
+    public function getCounts(string $dbname, array &$excludeAdmins = [], bool $wasAll = false): array
     {
         $db = dbal()->database($dbname);
 
-        $bansCount = $db->table('bans')->select()->innerJoin('admins');
-        $mutesCount = $db->table('mutes')->select()->innerJoin('admins')->where('type', 'MUTE');
-        $gagsCount = $db->table('mutes')->select()->innerJoin('admins')->where('type', 'GAG');
+        $bansCount = $db->table('bans')->select();
+        $mutesCount = $db->table('mutes')->select()->where('type', 'MUTE');
+        $gagsCount = $db->table('mutes')->select()->where('type', 'GAG');
 
         if (!empty($excludeAdmins)) {
             $bansCount->andWhere([
-                'admins.player_steamid' => [
+                'admin_steamid' => [
                     'NOT IN' => new Parameter($excludeAdmins)
                 ]
             ]);
             $mutesCount->andWhere([
-                'admins.player_steamid' => [
+                'admin_steamid' => [
                     'NOT IN' => new Parameter($excludeAdmins)
                 ]
             ]);
             $gagsCount->andWhere([
-                'admins.player_steamid' => [
+                'admin_steamid' => [
                     'NOT IN' => new Parameter($excludeAdmins)
                 ]
             ]);

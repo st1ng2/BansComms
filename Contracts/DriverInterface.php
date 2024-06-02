@@ -138,5 +138,5 @@ interface DriverInterface
      * 
      * @return array An array with the counts of bans, mutes, and gags.
      */
-    public function getCounts(string $dbname, array &$excludeAdmins = []): array;
+    public function getCounts(string $dbname, array &$excludeAdmins = [], bool $wasAll = false): array;
 }

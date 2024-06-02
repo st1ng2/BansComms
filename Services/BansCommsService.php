@@ -165,13 +165,17 @@ class BansCommsService
             'admins' => 0
         ];
 
+        $wasAll = [];
+
         foreach ($this->serverModes as $serverMode) {
-            $serverCounts = $this->getCounts($serverMode['server']->id, $excludeAdmins);
+            $serverCounts = $this->getCounts($serverMode['server']->id, $excludeAdmins, isset($wasAll[$serverMode['factory']]));
 
             $totalCounts['bans'] += $serverCounts['bans'];
             $totalCounts['mutes'] += $serverCounts['mutes'];
             $totalCounts['gags'] += $serverCounts['gags'];
             $totalCounts['admins'] += $serverCounts['admins'];
+
+            $wasAll[$serverMode['factory']] = true;
         }
 
         return $totalCounts;
@@ -185,7 +189,7 @@ class BansCommsService
      * @return array An array with the counts of bans, mutes, gags, and unique admins.
      * @throws \Exception If the module is not configured or server is not found.
      */
-    public function getCounts(?int $sid = null, array &$excludeAdmins = []): array
+    public function getCounts(?int $sid = null, array &$excludeAdmins = [], bool $wasAll = false): array
     {
         $this->validateServerModes();
 
