@@ -18,7 +18,10 @@ BansComms is compatible with a variety of administrative tools, including:
 *Here, you can find a few snapshots of the BansComms module in action:*
 
 ![image](https://github.com/Flute-CMS/BansComms/assets/62756604/1547fc71-8588-4957-9c7b-ee2a6d5a55b3)
+
 ![image](https://github.com/Flute-CMS/BansComms/assets/62756604/21dc901a-22c4-41c0-9b4b-32e789984fc8)
+
+![image](https://github.com/Flute-CMS/BansComms/assets/62756604/517acce6-0a65-43ed-b107-a37ae2fa1845)
 
 
 # Installation and Configuration
